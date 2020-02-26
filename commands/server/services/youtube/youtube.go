@@ -25,12 +25,12 @@ type Response struct {
 	Result string
 }
 
-func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, result *Response) error {
+func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *Response) error {
 	err := upload(args)
 	if err != nil {
 		return err
 	}
-	*result = Response{Result: fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)}
+	reply.Result = fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)
 	return nil
 }
 
