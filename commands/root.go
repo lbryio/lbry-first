@@ -24,7 +24,6 @@ var rootCmd = &cobra.Command{
 	Long:  `One stop shop for uploading digital content to alternatives to empower LBRY First!`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.Info("Here")
 	},
 }
 

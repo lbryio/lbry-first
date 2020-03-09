@@ -5,6 +5,11 @@ go_import_path: github.com/lbryio/lbry-first
 
 go: 1.13.4
 
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
+
 script:
   #Fetch master to be used in deploy condition to prevent deploying on old commits.
   - git fetch origin master:master
