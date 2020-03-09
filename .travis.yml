@@ -20,7 +20,7 @@ deploy:
   # calls goreleaser for production release
   - provider: script
     skip_cleanup: true
-    script: curl -sL https://git.io/goreleaser | bash
+    script: ./deploy.sh
     on:
       tags: true
       condition: $TRAVIS_OS_NAME = linux
