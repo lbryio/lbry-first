@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"google.golang.org/api/youtube/v3"
@@ -25,9 +26,19 @@ type Response struct {
 	Result string
 }
 
+type uploadInfo struct {
+	LastUpdate time.Time
+	Start      time.Time
+	Total      int64
+	Progress   int64
+}
+
+var currentUpload uploadInfo
+
 func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *Response) error {
 	err := upload(args)
 	if err != nil {
+		reply.Result = errors.FullTrace(err)
 		return err
 	}
 	reply.Result = fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)
@@ -67,11 +78,18 @@ func upload(args *YoutubeArgs) error {
 	if err != nil {
 		return errors.Err("Error opening %v: %v", args.FilePath, err)
 	}
-
-	response, err := call.Media(file).Do()
+	currentUpload.Start = time.Now()
+	response, err := call.ProgressUpdater(progressUpdate).Media(file).Do()
 	if err != nil {
 		return errors.Err(err)
 	}
 	logrus.Infof("Upload successful! Video ID: %v\n", response.Id)
 	return nil
+}
+
+func progressUpdate(current, total int64) {
+	currentUpload.LastUpdate = time.Now()
+	currentUpload.Progress = current
+	currentUpload.Total = total
+	logrus.Infof("Upload Progress: %d/%d in %.2f minutes", current, total, time.Since(currentUpload.Start).Minutes())
 }

@@ -1,0 +1,21 @@
+os: linux
+dist: xenial
+language: go
+go_import_path: github.com/lbryio/lbry-first
+
+go: 1.13.4
+
+script:
+  #Fetch master to be used in deploy condition to prevent deploying on old commits.
+  - git fetch origin master:master
+  - ./build.sh
+  - go test ./...
+
+deploy:
+  # calls goreleaser for production release
+  - provider: script
+    skip_cleanup: true
+    script: curl -sL https://git.io/goreleaser | bash
+    on:
+      tags: true
+      condition: $TRAVIS_OS_NAME = linux

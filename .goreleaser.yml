@@ -1,0 +1,32 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -X ${IMPORTPATH}/commands/server/services/youtube.clientSecret=${.Env.CLIENTSECRET}" -X "{{ .Env.IMPORTPATH }}/meta.semVersion={{ .Tag }}" -X "{{ .Env.IMPORTPATH }}/meta.version={{ .Env.VERSIONSHORT }}" -X "{{ .Env.IMPORTPATH }}/meta.versionLong={{ .Env.VERSIONLONG }}" -X "{{ .Env.IMPORTPATH }}/meta.commitMsg={{ .Env.COMMITMSG }}"
+archives:
+  - id: zip
+    name_template: 'lbry-first_{{ .Os }}_{{ .Arch }}'
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+    format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
