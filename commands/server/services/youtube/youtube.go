@@ -38,7 +38,6 @@ var currentUpload uploadInfo
 func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *Response) error {
 	err := upload(args)
 	if err != nil {
-		logrus.Error(errors.FullTrace(err))
 		return err
 	}
 	reply.Result = fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)
