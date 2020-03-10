@@ -10,7 +10,7 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - -X ${IMPORTPATH}/commands/server/services/youtube.clientSecret=${.Env.CLIENTSECRET}" -X "{{ .Env.IMPORTPATH }}/meta.semVersion={{ .Tag }}" -X "{{ .Env.IMPORTPATH }}/meta.version={{ .Env.VERSIONSHORT }}" -X "{{ .Env.IMPORTPATH }}/meta.versionLong={{ .Env.VERSIONLONG }}" -X "{{ .Env.IMPORTPATH }}/meta.commitMsg={{ .Env.COMMITMSG }}"
+      - -X ${.Env.IMPORTPATH}/commands/server/services/youtube.clientSecret=${.Env.CLIENTSECRET}" -X "{{ .Env.IMPORTPATH }}/meta.semVersion={{ .Tag }}" -X "{{ .Env.IMPORTPATH }}/meta.version={{ .Env.VERSIONSHORT }}" -X "{{ .Env.IMPORTPATH }}/meta.versionLong={{ .Env.VERSIONLONG }}" -X "{{ .Env.IMPORTPATH }}/meta.commitMsg={{ .Env.COMMITMSG }}"
 archives:
   - id: zip
     name_template: 'lbry-first_{{ .Os }}_{{ .Arch }}'

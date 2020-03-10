@@ -8,9 +8,11 @@ import (
 	"github.com/lbryio/lbry-first/commands/server/services/youtube"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"os"
 )
 
 func Start() {
+	logrus.SetOutput(os.Stdout)
 	rpcServer := rpc.NewServer()
 
 	rpcServer.RegisterCodec(json.NewCodec(), "application/json")
