@@ -38,7 +38,7 @@ var currentUpload uploadInfo
 func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *Response) error {
 	err := upload(args)
 	if err != nil {
-		reply.Result = errors.FullTrace(err)
+		logrus.Error(errors.FullTrace(err))
 		return err
 	}
 	reply.Result = fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)
@@ -50,7 +50,10 @@ func upload(args *YoutubeArgs) error {
 		//return errors.Err("You must provide a filename of a video file to upload")
 	}
 
-	client := getClient(youtube.YoutubeUploadScope)
+	client, err := getClient(youtube.YoutubeUploadScope)
+	if err != nil {
+		return errors.Err(err)
+	}
 
 	service, err := youtube.New(client)
 	if err != nil {

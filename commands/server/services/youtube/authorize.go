@@ -3,7 +3,8 @@ package youtube
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/lbryio/lbry.go/v2/extras/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,7 +23,7 @@ import (
 // then generate a Client. It returns the generated Client.
 var clientSecret string
 
-func getClient(scope string) *http.Client {
+func getClient(scope string) (*http.Client, error) {
 	if clientSecret == "" {
 		clientSecret = os.Getenv("CLIENTSECRET")
 	}
@@ -31,25 +32,26 @@ func getClient(scope string) *http.Client {
 	// at ~/.credentials/youtube-go.json
 	config, err := google.ConfigFromJSON([]byte(clientSecret), scope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return nil, errors.Err("Unable to parse client secret file to config: %v", err)
 	}
 
 	config.RedirectURL = "http://localhost:8090"
 
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
-		log.Fatalf("Unable to get path to cached credential file. %v", err)
+		return nil, errors.Err("Unable to get path to cached credential file. %v", err)
 	}
 	tok, err := tokenFromFile(cacheFile)
 	if err != nil {
 		authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 		fmt.Println("Trying to get token from web")
 		tok, err = getTokenFromWeb(config, authURL)
-		if err == nil {
-			saveToken(cacheFile, tok)
+		if err != nil {
+			return nil, errors.Err(err)
 		}
+		err = saveToken(cacheFile, tok)
 	}
-	return config.Client(ctx, tok)
+	return config.Client(ctx, tok), err
 }
 
 // startWebServer starts a web server that listens on http://localhost:8090.
@@ -94,7 +96,7 @@ func openURL(url string) error {
 func exchangeToken(config *oauth2.Config, code string) (*oauth2.Token, error) {
 	tok, err := config.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		log.Fatalf("Unable to retrieve token %v", err)
+		return nil, errors.Err("Unable to retrieve token %v", err)
 	}
 	return tok, nil
 }
@@ -104,17 +106,16 @@ func exchangeToken(config *oauth2.Config, code string) (*oauth2.Token, error) {
 func getTokenFromWeb(config *oauth2.Config, authURL string) (*oauth2.Token, error) {
 	codeCh, err := startWebServer()
 	if err != nil {
-		fmt.Printf("Unable to start a web server.")
-		return nil, err
+		return nil, errors.Prefix("Unable to start a web server.", err)
 	}
 
 	err = openURL(authURL)
 	if err != nil {
-		log.Fatalf("Unable to open authorization URL in web server: %v", err)
+		return nil, errors.Err("Unable to open authorization URL in web server: %v", err)
 	} else {
-		fmt.Println("Your browser has been opened to an authorization URL.",
+		logrus.Info("Your browser has been opened to an authorization URL.",
 			" This program will resume once authorization has been provided.")
-		fmt.Println(authURL)
+		logrus.Info(authURL)
 	}
 
 	// Wait for the web server to get the code.
@@ -150,13 +151,13 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 
 // saveToken uses a file path to create a file and store the
 // token in it.
-func saveToken(file string, token *oauth2.Token) {
-	fmt.Println("trying to save token")
-	fmt.Printf("Saving credential file to: %s\n", file)
+func saveToken(file string, token *oauth2.Token) error {
+	logrus.Info("trying to save token")
+	logrus.Infof("Saving credential file to: %s\n", file)
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		return errors.Err("Unable to cache oauth token: %v", err)
 	}
 	defer f.Close()
-	json.NewEncoder(f).Encode(token)
+	return json.NewEncoder(f).Encode(token)
 }
