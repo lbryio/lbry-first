@@ -27,13 +27,13 @@ var clientSecret string
 
 func getClient(scope string) (*http.Client, error) {
 	if clientSecret == "" {
-		clientSecretHex := os.Getenv("CLIENTSECRET")
-		secretbytes, err := hex.DecodeString(clientSecretHex)
-		if err != nil {
-			return nil, errors.Err(err)
-		}
-		clientSecret = string(secretbytes)
+		clientSecret = os.Getenv("CLIENTSECRET")
 	}
+	secretbytes, err := hex.DecodeString(clientSecret)
+	if err != nil {
+		return nil, errors.Err(err)
+	}
+	clientSecret = string(secretbytes)
 	ctx := context.Background()
 	// If modifying the scope, delete your previously saved credentials
 	// at ~/.credentials/youtube-go.json
