@@ -1,10 +1,9 @@
 package youtube
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/lbryio/lbry.go/v2/extras/errors"
-	"github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +13,9 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/lbryio/lbry.go/v2/extras/errors"
+
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -25,7 +27,12 @@ var clientSecret string
 
 func getClient(scope string) (*http.Client, error) {
 	if clientSecret == "" {
-		clientSecret = os.Getenv("CLIENTSECRET")
+		clientSecretHex := os.Getenv("CLIENTSECRET")
+		secretbytes, err := hex.DecodeString(clientSecretHex)
+		if err != nil {
+			return nil, errors.Err(err)
+		}
+		clientSecret = string(secretbytes)
 	}
 	ctx := context.Background()
 	// If modifying the scope, delete your previously saved credentials
