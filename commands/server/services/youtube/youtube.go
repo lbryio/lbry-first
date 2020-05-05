@@ -55,6 +55,18 @@ func (t *YoutubeService) HasAuth(r *http.Request, args *AuthArgs, reply *AuthRes
 	return nil
 }
 
+type SignupResponse struct{}
+
+type SignUpArgs struct{}
+
+func (t *YoutubeService) Signup(r *http.Request, args *SignUpArgs, reply *SignupResponse) error {
+	_, err := getClient(youtube.YoutubeUploadScope)
+	if err != nil {
+		return errors.Err(err)
+	}
+	return nil
+}
+
 func upload(args *YoutubeArgs) (*youtube.Video, error) {
 	if args.FilePath == "" {
 		//return errors.Err("You must provide a filename of a video file to upload")
