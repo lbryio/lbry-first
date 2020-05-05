@@ -1,7 +1,6 @@
 package youtube
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -22,8 +21,8 @@ type YoutubeArgs struct {
 
 type YoutubeService struct{}
 
-type Response struct {
-	Result string
+type UploadResponse struct {
+	Video youtube.Video
 }
 
 type uploadInfo struct {
@@ -35,28 +34,40 @@ type uploadInfo struct {
 
 var currentUpload uploadInfo
 
-func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *Response) error {
-	err := upload(args)
+func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *UploadResponse) error {
+	ytVideo, err := upload(args)
 	if err != nil {
 		return err
 	}
-	reply.Result = fmt.Sprintf("Video uploaded to youtube ( %s )", args.Title)
+
+	reply.Video = *ytVideo
 	return nil
 }
 
-func upload(args *YoutubeArgs) error {
+type AuthResponse struct {
+	HasAuth bool
+}
+
+type AuthArgs struct{}
+
+func (t *YoutubeService) HasAuth(r *http.Request, args *AuthArgs, reply *AuthResponse) error {
+	reply.HasAuth = isTokenOnFile()
+	return nil
+}
+
+func upload(args *YoutubeArgs) (*youtube.Video, error) {
 	if args.FilePath == "" {
 		//return errors.Err("You must provide a filename of a video file to upload")
 	}
 
 	client, err := getClient(youtube.YoutubeUploadScope)
 	if err != nil {
-		return errors.Err(err)
+		return nil, errors.Err(err)
 	}
 
 	service, err := youtube.New(client)
 	if err != nil {
-		return errors.Prefix("Error creating YouTube client: %v", err)
+		return nil, errors.Prefix("Error creating YouTube client: %v", err)
 	}
 
 	upload := &youtube.Video{
@@ -78,15 +89,15 @@ func upload(args *YoutubeArgs) error {
 	file, err := os.Open(args.FilePath)
 	defer file.Close()
 	if err != nil {
-		return errors.Err("Error opening %v: %v", args.FilePath, err)
+		return nil, errors.Err("Error opening %v: %v", args.FilePath, err)
 	}
 	currentUpload.Start = time.Now()
 	response, err := call.ProgressUpdater(progressUpdate).Media(file).Do()
 	if err != nil {
-		return errors.Err(err)
+		return nil, errors.Err(err)
 	}
 	logrus.Infof("Upload successful! Video ID: %v\n", response.Id)
-	return nil
+	return response, nil
 }
 
 func progressUpdate(current, total int64) {

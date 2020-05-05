@@ -156,6 +156,15 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 	return t, err
 }
 
+func isTokenOnFile() bool {
+	cacheFile, err := tokenCacheFile()
+	if err != nil {
+		return false
+	}
+	_, err = tokenFromFile(cacheFile)
+	return err == nil
+}
+
 // saveToken uses a file path to create a file and store the
 // token in it.
 func saveToken(file string, token *oauth2.Token) error {
