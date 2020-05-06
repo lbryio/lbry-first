@@ -3,7 +3,7 @@ module github.com/lbryio/lbry-first
 go 1.13
 
 require (
-	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/rpc v1.2.0
 	github.com/lbryio/lbry.go/v2 v2.4.6
