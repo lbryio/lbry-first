@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/asaskevich/govalidator"
 	"net"
 	"net/http"
 	"net/url"
@@ -28,12 +29,18 @@ var clientSecret string
 func getClient(scope string) (*http.Client, error) {
 	if clientSecret == "" {
 		clientSecret = os.Getenv("CLIENTSECRET")
+
 	}
-	secretbytes, err := hex.DecodeString(clientSecret)
-	if err != nil {
-		return nil, errors.Err(err)
+
+	if govalidator.IsHexadecimal(clientSecret) {
+		secretbytes, err := hex.DecodeString(clientSecret)
+		if err != nil {
+			return nil, errors.Err(err)
+		}
+
+		clientSecret = string(secretbytes)
 	}
-	clientSecret = string(secretbytes)
+
 	ctx := context.Background()
 	// If modifying the scope, delete your previously saved credentials
 	// at ~/.credentials/youtube-go.json
