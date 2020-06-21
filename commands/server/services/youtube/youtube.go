@@ -1,22 +1,27 @@
 package youtube
 
 import (
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
+
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/youtube/v3"
 )
 
 type YoutubeArgs struct {
-	Title       string
-	Description string
-	FilePath    string
-	Category    string
-	Keywords    string
+	Title           string
+	Description     string
+	FilePath        string
+	Keywords        string
+	ThumbnailURL    string
+	PublishAt       string //premiere date (default now)
+	PublishType     string // 'private', 'public', or 'unlisted'
+	MonetizationOff bool
 }
 
 type YoutubeService struct{}
@@ -33,8 +38,18 @@ type uploadInfo struct {
 }
 
 var currentUpload uploadInfo
+var uploadStatus = map[string]bool{"private": true, "public": true, "unlisted": true}
 
-func (t *YoutubeService) Upload(r *http.Request, args *YoutubeArgs, reply *UploadResponse) error {
+func (t *YoutubeService) Upload(_ *http.Request, args *YoutubeArgs, reply *UploadResponse) error {
+	if args.FilePath == "" {
+		return nil //Don't upload if no file path is provided ( likely an update...)
+	}
+	if args.PublishType != "" && !uploadStatus[args.PublishType] {
+		return errors.Err("%s is not a valid publish type, should be 'private', 'public', or 'unlisted'", args.PublishType)
+	}
+	if args.PublishAt != "" && args.PublishType != "private" {
+		return errors.Err("publish type of 'private' needs to be set if the publish at is set")
+	}
 	ytVideo, err := upload(args)
 	if err != nil {
 		return err
@@ -50,7 +65,7 @@ type AuthResponse struct {
 
 type AuthArgs struct{}
 
-func (t *YoutubeService) HasAuth(r *http.Request, args *AuthArgs, reply *AuthResponse) error {
+func (t *YoutubeService) HasAuth(_ *http.Request, _ *AuthArgs, reply *AuthResponse) error {
 	reply.HasAuth = isTokenOnFile()
 	return nil
 }
@@ -59,7 +74,7 @@ type SignupResponse struct{}
 
 type SignUpArgs struct{}
 
-func (t *YoutubeService) Signup(r *http.Request, args *SignUpArgs, reply *SignupResponse) error {
+func (t *YoutubeService) Signup(_ *http.Request, _ *SignUpArgs, _ *SignupResponse) error {
 	_, err := getClient(youtube.YoutubeUploadScope)
 	if err != nil {
 		return errors.Err(err)
@@ -67,9 +82,28 @@ func (t *YoutubeService) Signup(r *http.Request, args *SignUpArgs, reply *Signup
 	return nil
 }
 
+type RemoveResponse struct{}
+
+type RemoveArgs struct{}
+
+func (t *YoutubeService) Remove(_ *http.Request, _ RemoveArgs, _ *RemoveResponse) error {
+	cacheFile, err := tokenCacheFile()
+	if err != nil {
+		return errors.Err(err)
+	}
+	_, err = tokenFromFile(cacheFile)
+	if err == nil {
+		err := os.Remove(cacheFile)
+		if err != nil {
+			return errors.Err(err)
+		}
+	}
+	return nil
+}
+
 func upload(args *YoutubeArgs) (*youtube.Video, error) {
-	if args.FilePath == "" {
-		//return errors.Err("You must provide a filename of a video file to upload")
+	if args.PublishType == "" {
+		args.PublishType = "private"
 	}
 
 	client, err := getClient(youtube.YoutubeUploadScope)
@@ -82,13 +116,34 @@ func upload(args *YoutubeArgs) (*youtube.Video, error) {
 		return nil, errors.Prefix("Error creating YouTube client: %v", err)
 	}
 
+	var thumbNail *youtube.ThumbnailDetails
+	if args.ThumbnailURL != "" {
+		thumbNail = &youtube.ThumbnailDetails{
+			Default: &youtube.Thumbnail{
+				Url: args.ThumbnailURL,
+			},
+		}
+	}
+
 	upload := &youtube.Video{
+		FileDetails: &youtube.VideoFileDetails{
+			FileName: filepath.SplitList(args.FilePath)[1],
+		},
 		Snippet: &youtube.VideoSnippet{
 			Title:       args.Title,
 			Description: args.Description,
-			CategoryId:  "",
+			Tags:        strings.Split(args.Keywords, ","),
+			Thumbnails:  thumbNail,
 		},
-		Status: &youtube.VideoStatus{PrivacyStatus: "private"},
+		MonetizationDetails: &youtube.VideoMonetizationDetails{
+			Access: &youtube.AccessPolicy{
+				Allowed: !args.MonetizationOff,
+			},
+		},
+		Status: &youtube.VideoStatus{
+			PrivacyStatus: args.PublishType,
+			PublishAt:     args.PublishAt,
+		},
 	}
 
 	// The API returns a 400 Bad Request response if tags is an empty string.
