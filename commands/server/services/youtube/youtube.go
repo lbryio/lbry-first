@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lbryio/lbry-first/commands/server/lbry"
+
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +24,9 @@ type YoutubeArgs struct {
 	PublishAt       string //premiere date (default now)
 	PublishType     string // 'private', 'public', or 'unlisted'
 	MonetizationOff bool
+	AuthToken       string
+	ClaimName       string
+	URI             string
 }
 
 type YoutubeService struct{}
@@ -54,19 +59,25 @@ func (t *YoutubeService) Upload(_ *http.Request, args *YoutubeArgs, reply *Uploa
 	if err != nil {
 		return err
 	}
+	if ytVideo == nil {
+		return errors.Err("failed to return youtube confirmation of upload. Please check the status.")
+	}
 
 	reply.Video = *ytVideo
-	return nil
+	return notifyIAPIs(ytVideo, args)
 }
 
 type AuthResponse struct {
 	HasAuth bool
 }
 
-type AuthArgs struct{}
+type AuthArgs struct {
+	AuthToken string
+}
 
-func (t *YoutubeService) HasAuth(_ *http.Request, _ *AuthArgs, reply *AuthResponse) error {
+func (t *YoutubeService) HasAuth(_ *http.Request, args *AuthArgs, reply *AuthResponse) error {
 	reply.HasAuth = isTokenOnFile()
+	lbry.AuthToken = args.AuthToken
 	return nil
 }
 
@@ -86,7 +97,7 @@ type RemoveResponse struct{}
 
 type RemoveArgs struct{}
 
-func (t *YoutubeService) Remove(_ *http.Request, _ RemoveArgs, _ *RemoveResponse) error {
+func (t *YoutubeService) Remove(r *http.Request, args *RemoveArgs, reply *RemoveResponse) error {
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
 		return errors.Err(err)
@@ -124,22 +135,31 @@ func upload(args *YoutubeArgs) (*youtube.Video, error) {
 			},
 		}
 	}
-
-	upload := &youtube.Video{
-		FileDetails: &youtube.VideoFileDetails{
-			FileName: filepath.SplitList(args.FilePath)[1],
-		},
-		Snippet: &youtube.VideoSnippet{
-			Title:       args.Title,
-			Description: args.Description,
-			Tags:        strings.Split(args.Keywords, ","),
-			Thumbnails:  thumbNail,
-		},
-		MonetizationDetails: &youtube.VideoMonetizationDetails{
+	var fileName *youtube.VideoFileDetails
+	if false { //len(args.FilePath) > 0 {
+		dir, name := filepath.Split(args.FilePath)
+		logrus.Debug("Dir:", dir, "Name:", name)
+		fileName = &youtube.VideoFileDetails{
+			FileName: name,
+		}
+	}
+	var monetizationDetails *youtube.VideoMonetizationDetails
+	if false {
+		monetizationDetails = &youtube.VideoMonetizationDetails{
 			Access: &youtube.AccessPolicy{
 				Allowed: !args.MonetizationOff,
 			},
+		}
+	}
+
+	upload := &youtube.Video{
+		FileDetails: fileName,
+		Snippet: &youtube.VideoSnippet{
+			Title:       args.Title,
+			Description: args.Description,
+			Thumbnails:  thumbNail,
 		},
+		MonetizationDetails: monetizationDetails,
 		Status: &youtube.VideoStatus{
 			PrivacyStatus: args.PublishType,
 			PublishAt:     args.PublishAt,
@@ -172,4 +192,30 @@ func progressUpdate(current, total int64) {
 	currentUpload.Progress = current
 	currentUpload.Total = total
 	logrus.Infof("Upload Progress: %d/%d in %.2f minutes", current, total, time.Since(currentUpload.Start).Minutes())
+}
+
+func notifyIAPIs(video *youtube.Video, args *YoutubeArgs) error {
+	me := lbry.GetUserInfo()
+	if me.Error != nil {
+		return errors.Err(me.Error)
+	}
+	if len(me.Data.YoutubeChannels) > 0 {
+		for _, yt := range me.Data.YoutubeChannels {
+			if yt.YtChannelName == video.Snippet.ChannelTitle {
+				parts := strings.Split(args.URI, "#")
+				var claimID string
+				if len(parts) > 1 {
+					claimID = parts[1]
+				}
+				if args.ClaimName != "" && claimID != "" {
+					err := lbry.VideoStatusUpdate(video.Snippet.ChannelId, video.Id, args.ClaimName, claimID, "published", time.Now())
+					if err != nil {
+						return errors.Err(err)
+					}
+					return nil
+				}
+			}
+		}
+	}
+	return nil
 }

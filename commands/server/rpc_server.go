@@ -1,6 +1,9 @@
 package server
 
 import (
+	"net/http"
+	"os"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
@@ -8,8 +11,6 @@ import (
 	"github.com/lbryio/lbry-first/commands/server/services/youtube"
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"os"
 )
 
 func Start() {
