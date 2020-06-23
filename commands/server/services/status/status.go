@@ -1,6 +1,10 @@
 package status
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/lbryio/lbry-first/meta"
+)
 
 type ServerService struct{}
 
@@ -16,6 +20,7 @@ type Response struct {
 
 func (t *ServerService) Status(r *http.Request, args *ServerArgs, reply *Response) error {
 	reply.Running = true
-	reply.Message = "All good to go!"
+	reply.Message = meta.GetCommitMessage()
+	reply.Commit = meta.GetVersionLong()
 	return nil
 }
