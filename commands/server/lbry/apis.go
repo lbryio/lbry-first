@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 )
 
@@ -74,6 +76,11 @@ func GetUserInfo() UserMeResponse {
 
 func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, status string, publishedAt time.Time) error {
 	c := http.Client{}
+	if len(AuthToken) > 7 {
+		logrus.Info("Making API Call with token ", AuthToken[0:7], "...")
+	} else {
+		logrus.Warning("No auth token?")
+	}
 	form := make(url.Values)
 	form.Set("auth_token", AuthToken)
 	form.Set("youtube_channel_id", ytchannelID)
@@ -82,12 +89,17 @@ func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, statu
 	form.Set("claim_id", lbryClaimID)
 	form.Set("status", status)
 	form.Set("published_at", strconv.FormatInt(publishedAt.Unix(), 10))
-	_, err := c.PostForm("https://api.lbry.com/yt/video_status", form)
+	r, err := c.PostForm("https://api.lbry.com/yt/video_status", form)
+	if r != nil {
+		logrus.Info("APIs Call:", r.Status, r.StatusCode)
+	}
 	if err != nil {
+		logrus.Info("APIs Call Error:", err)
 		if strings.Contains(err.Error(), "No matching channel found for") {
 			return nil
 		}
 		return errors.Err(err)
 	}
+
 	return nil
 }

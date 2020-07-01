@@ -199,8 +199,10 @@ func notifyIAPIs(video *youtube.Video, args *YoutubeArgs) error {
 	if me.Error != nil {
 		return errors.Err(me.Error)
 	}
+	logrus.Info("Number of YoutubeChannels:", len(me.Data.YoutubeChannels))
 	if len(me.Data.YoutubeChannels) > 0 {
 		for _, yt := range me.Data.YoutubeChannels {
+			logrus.Info("Channel: ", yt.YtChannelName, "ClaimID: ", yt.ChannelClaimID)
 			if yt.YtChannelName == video.Snippet.ChannelTitle {
 				parts := strings.Split(args.URI, "#")
 				var claimID string
