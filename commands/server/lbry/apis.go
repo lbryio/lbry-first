@@ -74,7 +74,7 @@ func GetUserInfo() UserMeResponse {
 	return me
 }
 
-func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, status string, publishedAt time.Time) error {
+func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, status string, publishedAt time.Time, size int) error {
 	c := http.Client{}
 	if len(AuthToken) > 7 {
 		logrus.Info("Making API Call with token ", AuthToken[0:7], "...")
@@ -88,6 +88,9 @@ func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, statu
 	form.Set("claim_name", lbryClaimName)
 	form.Set("claim_id", lbryClaimID)
 	form.Set("status", status)
+	form.Set("metadata_version", strconv.Itoa(2))
+	form.Set("transferred", strconv.FormatBool(true))
+	form.Set("size", strconv.Itoa(size))
 	form.Set("published_at", strconv.FormatInt(publishedAt.Unix(), 10))
 	r, err := c.PostForm("https://api.lbry.com/yt/video_status", form)
 	if r != nil {

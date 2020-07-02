@@ -199,6 +199,10 @@ func notifyIAPIs(video *youtube.Video, args *YoutubeArgs) error {
 	if me.Error != nil {
 		return errors.Err(me.Error)
 	}
+	var size int
+	if video.FileDetails != nil {
+		size = int(video.FileDetails.FileSize)
+	}
 	logrus.Info("Number of YoutubeChannels:", len(me.Data.YoutubeChannels))
 	if len(me.Data.YoutubeChannels) > 0 {
 		for _, yt := range me.Data.YoutubeChannels {
@@ -210,7 +214,7 @@ func notifyIAPIs(video *youtube.Video, args *YoutubeArgs) error {
 					claimID = parts[1]
 				}
 				if args.ClaimName != "" && claimID != "" {
-					err := lbry.VideoStatusUpdate(video.Snippet.ChannelId, video.Id, args.ClaimName, claimID, "published", time.Now())
+					err := lbry.VideoStatusUpdate(video.Snippet.ChannelId, video.Id, args.ClaimName, claimID, "published", time.Now(), size)
 					if err != nil {
 						return errors.Err(err)
 					}
