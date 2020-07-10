@@ -91,7 +91,7 @@ func VideoStatusUpdate(ytchannelID, ytVideoID, lbryClaimName, lbryClaimID, statu
 	form.Set("metadata_version", strconv.Itoa(2))
 	form.Set("transferred", strconv.FormatBool(true))
 	form.Set("size", strconv.Itoa(size))
-	form.Set("is_lbry_first", "true")
+	form.Set("is_lbry_first", strconv.FormatBool(true))
 	form.Set("published_at", strconv.FormatInt(publishedAt.Unix(), 10))
 	r, err := c.PostForm("https://api.lbry.com/yt/video_status", form)
 	if r != nil {
