@@ -27,8 +27,9 @@ import (
 var clientSecret string
 
 func getClient(scope string) (*http.Client, error) {
-	if clientSecret == "" {
-		clientSecret = os.Getenv("CLIENTSECRET")
+	clientSecretEnv := os.Getenv("CLIENTSECRET")
+	if clientSecretEnv != "" {
+		clientSecret = clientSecretEnv
 
 	}
 
